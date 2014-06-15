@@ -3,7 +3,6 @@
 package basen_test
 
 import (
-	"crypto/rand"
 	"testing"
 
 	gc "launchpad.net/gocheck"
@@ -39,8 +38,13 @@ func (s *Suite) TestRoundTrip62(c *gc.C) {
 
 func (s *Suite) TestRand256(c *gc.C) {
 	for i := 0; i < 100; i++ {
-		v := basen.StdBase62.MustRandom(rand.Reader, 32)
+		v := basen.StdBase62.MustRandom(32)
 		// Should be 43 chars or less because math.log(2**256, 62) == 42.994887413002736
 		c.Assert(len(v) < 44, gc.Equals, true)
 	}
+}
+
+func (s *Suite) TestNoMultiByte(c *gc.C) {
+	c.Assert(func() { basen.NewEncoding("世界") }, gc.PanicMatches,
+		"multi-byte characters not supported")
 }

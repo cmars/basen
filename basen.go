@@ -5,10 +5,11 @@ package basen
 import (
 	"crypto/rand"
 	"fmt"
-	"io"
 	"math/big"
+	"unicode/utf8"
 )
 
+// Encoding represents a given base-N encoding.
 type Encoding struct {
 	alphabet string
 	index    map[byte]int
@@ -17,8 +18,11 @@ type Encoding struct {
 
 const stdBase62Alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
+// StdBase62 represents bytes as a base-62 number (0-9A-Za-z).
 var StdBase62 = NewEncoding(stdBase62Alphabet)
 
+// NewEncoding creates a new base-N representation from the given alphabet.
+// Panics if the alphabet is not unique. Only ASCII characters are supported.
 func NewEncoding(alphabet string) *Encoding {
 	return &Encoding{
 		alphabet: alphabet,
@@ -28,39 +32,48 @@ func NewEncoding(alphabet string) *Encoding {
 }
 
 func newAlphabetMap(s string) map[byte]int {
+	if utf8.RuneCountInString(s) != len(s) {
+		panic("multi-byte characters not supported")
+	}
 	result := make(map[byte]int)
 	for i := range s {
 		result[s[i]] = i
+	}
+	if len(result) != len(s) {
+		panic("alphabet contains non-unique characters")
 	}
 	return result
 }
 
 var zero = big.NewInt(int64(0))
 
-func (enc *Encoding) Random(r io.Reader, n int) (string, error) {
-	if r == nil {
-		r = rand.Reader
-	}
+// Random returns the base-encoded representation of n random bytes.
+func (enc *Encoding) Random(n int) (string, error) {
 	buf := make([]byte, n)
-	_, err := r.Read(buf)
+	_, err := rand.Reader.Read(buf)
 	if err != nil {
 		return "", err
 	}
 	return enc.EncodeToString(buf), nil
 }
 
-func (enc *Encoding) MustRandom(r io.Reader, n int) string {
-	s, err := enc.Random(r, n)
+// MustRandom returns the base-encoded representation of n random bytes,
+// panicking in the unlikely event of a read error from the random source.
+func (enc *Encoding) MustRandom(n int) string {
+	s, err := enc.Random(n)
 	if err != nil {
 		panic(err)
 	}
 	return s
 }
 
+// Base returns the number base of the encoding.
 func (enc *Encoding) Base() int {
 	return len(enc.alphabet)
 }
 
+// EncodeToString returns the base-encoded string representation
+// of the given bytes.
 func (enc *Encoding) EncodeToString(b []byte) string {
 	n := new(big.Int)
 	r := new(big.Int)
@@ -73,6 +86,7 @@ func (enc *Encoding) EncodeToString(b []byte) string {
 	return string(result)
 }
 
+// DecodeString returns the bytes for the given base-encoded string.
 func (enc *Encoding) DecodeString(s string) ([]byte, error) {
 	result := big.NewInt(0)
 	for i := range s {
