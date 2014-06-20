@@ -3,6 +3,7 @@
 package basen_test
 
 import (
+	"math/big"
 	"testing"
 
 	gc "launchpad.net/gocheck"
@@ -24,6 +25,8 @@ func (s *Suite) TestRoundTrip62(c *gc.C) {
 		{[]byte{1}, "1"},
 		{[]byte{61}, "z"},
 		{[]byte{62}, "10"},
+		{big.NewInt(int64(3844)).Bytes(), "100"},
+		{big.NewInt(int64(3843)).Bytes(), "zz"},
 	}
 
 	for _, testCase := range testCases {

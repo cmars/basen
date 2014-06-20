@@ -9,10 +9,12 @@ import (
 	"unicode/utf8"
 )
 
+var zero = big.NewInt(int64(0))
+
 // Encoding represents a given base-N encoding.
 type Encoding struct {
 	alphabet string
-	index    map[byte]int
+	index    map[byte]*big.Int
 	base     *big.Int
 }
 
@@ -31,21 +33,19 @@ func NewEncoding(alphabet string) *Encoding {
 	}
 }
 
-func newAlphabetMap(s string) map[byte]int {
+func newAlphabetMap(s string) map[byte]*big.Int {
 	if utf8.RuneCountInString(s) != len(s) {
 		panic("multi-byte characters not supported")
 	}
-	result := make(map[byte]int)
+	result := make(map[byte]*big.Int)
 	for i := range s {
-		result[s[i]] = i
+		result[s[i]] = big.NewInt(int64(i))
 	}
 	if len(result) != len(s) {
 		panic("alphabet contains non-unique characters")
 	}
 	return result
 }
-
-var zero = big.NewInt(int64(0))
 
 // Random returns the base-encoded representation of n random bytes.
 func (enc *Encoding) Random(n int) (string, error) {
@@ -88,13 +88,13 @@ func (enc *Encoding) EncodeToString(b []byte) string {
 
 // DecodeString returns the bytes for the given base-encoded string.
 func (enc *Encoding) DecodeString(s string) ([]byte, error) {
-	result := big.NewInt(0)
+	result := new(big.Int)
 	for i := range s {
 		n, ok := enc.index[s[i]]
 		if !ok {
 			return nil, fmt.Errorf("invalid character %q at index %d", s[i], i)
 		}
-		result = big.NewInt(0).Add(big.NewInt(0).Mul(result, enc.base), big.NewInt(int64(n)))
+		result = result.Add(result.Mul(result, enc.base), n)
 	}
 	return result.Bytes(), nil
 }
