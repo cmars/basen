@@ -19,32 +19,53 @@ var _ = gc.Suite(&Suite{})
 
 func (s *Suite) TestRoundTrip62(c *gc.C) {
 	testCases := []struct {
+		enc *basen.Encoding
 		val []byte
-		b62 string
+		rep string
 	}{
-		{[]byte{1}, "1"},
-		{[]byte{61}, "z"},
-		{[]byte{62}, "10"},
-		{big.NewInt(int64(3844)).Bytes(), "100"},
-		{big.NewInt(int64(3843)).Bytes(), "zz"},
+		{basen.Base62, []byte{1}, "1"},
+		{basen.Base62, []byte{61}, "z"},
+		{basen.Base62, []byte{62}, "10"},
+		{basen.Base62, big.NewInt(int64(3844)).Bytes(), "100"},
+		{basen.Base62, big.NewInt(int64(3843)).Bytes(), "zz"},
+
+		{basen.Base58, big.NewInt(int64(10002343)).Bytes(), "Tgmc"},
+		{basen.Base58, big.NewInt(int64(1000)).Bytes(), "if"},
+		{basen.Base58, big.NewInt(int64(0)).Bytes(), ""},
 	}
 
 	for _, testCase := range testCases {
-		b62 := basen.StdBase62.EncodeToString(testCase.val)
-		c.Check(b62, gc.Equals, testCase.b62)
+		rep := testCase.enc.EncodeToString(testCase.val)
+		c.Check(rep, gc.Equals, testCase.rep)
 
-		val, err := basen.StdBase62.DecodeString(testCase.b62)
+		val, err := testCase.enc.DecodeString(testCase.rep)
 		c.Assert(err, gc.IsNil)
-		c.Check(val, gc.DeepEquals, testCase.val, gc.Commentf("%s", testCase.b62))
+		c.Check(val, gc.DeepEquals, testCase.val, gc.Commentf("%s", testCase.rep))
 	}
 }
 
 func (s *Suite) TestRand256(c *gc.C) {
 	for i := 0; i < 100; i++ {
-		v := basen.StdBase62.MustRandom(32)
+		v := basen.Base62.MustRandom(32)
 		// Should be 43 chars or less because math.log(2**256, 62) == 42.994887413002736
 		c.Assert(len(v) < 44, gc.Equals, true)
 	}
+}
+
+func (s *Suite) TestStringN(c *gc.C) {
+	var val []byte
+	var err error
+
+	val, err = basen.Base58.DecodeStringN("", 4)
+	c.Assert(err, gc.IsNil)
+	c.Assert(val, gc.DeepEquals, []byte{0, 0, 0, 0})
+
+	// ensure round-trip with padding is right
+	val, err = basen.Base62.DecodeStringN("10", 4)
+	c.Assert(err, gc.IsNil)
+	c.Assert(val, gc.DeepEquals, []byte{0, 0, 0, 62})
+	rep := basen.Base62.EncodeToString(val)
+	c.Assert(rep, gc.Equals, "10")
 }
 
 func (s *Suite) TestNoMultiByte(c *gc.C) {

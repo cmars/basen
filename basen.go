@@ -18,10 +18,15 @@ type Encoding struct {
 	base     *big.Int
 }
 
-const stdBase62Alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+const base62Alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
-// StdBase62 represents bytes as a base-62 number (0-9A-Za-z).
-var StdBase62 = NewEncoding(stdBase62Alphabet)
+// Base62 represents bytes as a base-62 number [0-9A-Za-z].
+var Base62 = NewEncoding(base62Alphabet)
+
+const base58Alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+
+// Base58 represents bytes as a base-58 number [1-9A-GHJ-LM-Za-z].
+var Base58 = NewEncoding(base58Alphabet)
 
 // NewEncoding creates a new base-N representation from the given alphabet.
 // Panics if the alphabet is not unique. Only ASCII characters are supported.
@@ -97,4 +102,18 @@ func (enc *Encoding) DecodeString(s string) ([]byte, error) {
 		result = result.Add(result.Mul(result, enc.base), n)
 	}
 	return result.Bytes(), nil
+}
+
+// DecodeStringN returns N bytes for the given base-encoded string.
+// Use this method to ensure the value is left-padded with zeroes.
+func (enc *Encoding) DecodeStringN(s string, n int) ([]byte, error) {
+	value, err := enc.DecodeString(s)
+	if err != nil {
+		return nil, err
+	}
+	if len(value) > n {
+		return nil, fmt.Errorf("value is too large")
+	}
+	pad := make([]byte, n-len(value))
+	return append(pad, value...), nil
 }
