@@ -105,6 +105,8 @@ func showCodecs() {
 }
 
 func main() {
+	log.SetFlags(0)
+	log.SetPrefix("basen: ")
 	flag.Parse()
 
 	if *help {
